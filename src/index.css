@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -37,20 +38,18 @@
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Metro theme colors */
+    --metro-red: 220 14% 96%;
+    --metro-blue: 214 32% 91%;
+    --metro-green: 138 76% 97%;
   }
 
   .dark {
@@ -99,5 +98,105 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   }
+}
+
+/* Metro-themed animations and utilities */
+@layer utilities {
+  .metro-gradient {
+    background: linear-gradient(135deg, #ef4444 0%, #3b82f6 50%, #22c55e 100%);
+  }
+  
+  .metro-card {
+    @apply bg-white shadow-lg rounded-xl border border-gray-100 hover:shadow-xl transition-all duration-300;
+  }
+  
+  .metro-button {
+    @apply bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 transform hover:scale-105;
+  }
+  
+  .station-dot {
+    @apply w-4 h-4 rounded-full border-2 border-white shadow-md;
+  }
+  
+  .station-line {
+    @apply w-1 h-8 bg-gray-300;
+  }
+  
+  .interchange-station {
+    @apply ring-4 ring-yellow-200 bg-yellow-500;
+  }
+}
+
+/* Smooth scrolling and animations */
+html {
+  scroll-behavior: smooth;
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Metro line colors */
+.metro-red-line {
+  background-color: #ef4444;
+}
+
+.metro-blue-line {
+  background-color: #3b82f6;
+}
+
+.metro-green-line {
+  background-color: #22c55e;
+}
+
+/* Loading animation */
+.metro-loading {
+  @apply animate-pulse;
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
