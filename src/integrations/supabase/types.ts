@@ -14,7 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      metro_lines: {
+        Row: {
+          color: string
+          color_class: string
+          created_at: string
+          id: string
+          name: string
+          route: string
+          updated_at: string
+        }
+        Insert: {
+          color: string
+          color_class: string
+          created_at?: string
+          id?: string
+          name: string
+          route: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          color_class?: string
+          created_at?: string
+          id?: string
+          name?: string
+          route?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      metro_stations: {
+        Row: {
+          created_at: string
+          id: string
+          is_interchange: boolean
+          line_id: string
+          name: string
+          position: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_interchange?: boolean
+          line_id: string
+          name: string
+          position: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_interchange?: boolean
+          line_id?: string
+          name?: string
+          position?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "metro_stations_line_id_fkey"
+            columns: ["line_id"]
+            isOneToOne: false
+            referencedRelation: "metro_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
