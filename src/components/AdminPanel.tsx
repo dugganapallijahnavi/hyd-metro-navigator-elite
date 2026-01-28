@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,22 +7,62 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Edit, Trash2, Train, MapPin } from 'lucide-react';
-import { metroData } from '@/lib/metroData';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  fetchAllLines, 
+  fetchAllStations, 
+  createLine, 
+  createStation, 
+  deleteLine, 
+  deleteStation,
+  MetroLine,
+  Station
+} from '@/lib/metroDbService';
 
-const AdminPanel = () => {
+interface AdminPanelProps {
+  onDataChange?: () => void;
+}
+
+const AdminPanel = ({ onDataChange }: AdminPanelProps) => {
   const { toast } = useToast();
   const [newLineName, setNewLineName] = useState('');
   const [newLineColor, setNewLineColor] = useState('');
+  const [newLineRoute, setNewLineRoute] = useState('');
   const [newStationName, setNewStationName] = useState('');
-  const [selectedLine, setSelectedLine] = useState('');
+  const [selectedLineId, setSelectedLineId] = useState('');
+  const [stationPosition, setStationPosition] = useState('');
   const [isInterchange, setIsInterchange] = useState('false');
+  const [lines, setLines] = useState<MetroLine[]>([]);
+  const [stations, setStations] = useState<Station[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const lines = metroData.getAllLines();
-  const stations = metroData.getAllStations();
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  const handleAddLine = () => {
-    if (!newLineName || !newLineColor) {
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [linesData, stationsData] = await Promise.all([
+        fetchAllLines(),
+        fetchAllStations()
+      ]);
+      setLines(linesData);
+      setStations(stationsData);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load metro data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddLine = async () => {
+    if (!newLineName || !newLineColor || !newLineRoute) {
       toast({
         title: "Error",
         description: "Please fill in all fields",
@@ -31,17 +71,60 @@ const AdminPanel = () => {
       return;
     }
 
-    toast({
-      title: "Line Added",
-      description: `${newLineName} has been added successfully`,
-    });
-    
-    setNewLineName('');
-    setNewLineColor('');
+    try {
+      const colorClassMap: Record<string, string> = {
+        purple: 'bg-purple-500',
+        orange: 'bg-orange-500',
+        yellow: 'bg-yellow-500',
+        pink: 'bg-pink-500',
+        red: 'bg-red-500',
+        blue: 'bg-blue-500',
+        green: 'bg-green-500'
+      };
+
+      await createLine(newLineName, newLineColor, colorClassMap[newLineColor] || 'bg-gray-500', newLineRoute);
+      
+      toast({
+        title: "Line Added",
+        description: `${newLineName} has been added successfully`,
+      });
+      
+      setNewLineName('');
+      setNewLineColor('');
+      setNewLineRoute('');
+      loadData();
+      onDataChange?.();
+    } catch (error) {
+      console.error('Error adding line:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add line. It may already exist.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleAddStation = () => {
-    if (!newStationName || !selectedLine) {
+  const handleDeleteLine = async (lineId: string, lineName: string) => {
+    try {
+      await deleteLine(lineId);
+      toast({
+        title: "Line Deleted",
+        description: `${lineName} has been removed`,
+      });
+      loadData();
+      onDataChange?.();
+    } catch (error) {
+      console.error('Error deleting line:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete line",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleAddStation = async () => {
+    if (!newStationName || !selectedLineId || !stationPosition) {
       toast({
         title: "Error",
         description: "Please fill in all fields",
@@ -50,15 +133,62 @@ const AdminPanel = () => {
       return;
     }
 
-    toast({
-      title: "Station Added",
-      description: `${newStationName} has been added to ${selectedLine}`,
-    });
-    
-    setNewStationName('');
-    setSelectedLine('');
-    setIsInterchange('false');
+    try {
+      await createStation(
+        newStationName, 
+        selectedLineId, 
+        parseInt(stationPosition), 
+        isInterchange === 'true'
+      );
+      
+      const selectedLine = lines.find(l => l.id === selectedLineId);
+      toast({
+        title: "Station Added",
+        description: `${newStationName} has been added to ${selectedLine?.name}`,
+      });
+      
+      setNewStationName('');
+      setSelectedLineId('');
+      setStationPosition('');
+      setIsInterchange('false');
+      loadData();
+      onDataChange?.();
+    } catch (error) {
+      console.error('Error adding station:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add station. It may already exist on this line.",
+        variant: "destructive"
+      });
+    }
   };
+
+  const handleDeleteStation = async (stationId: string, stationName: string) => {
+    try {
+      await deleteStation(stationId);
+      toast({
+        title: "Station Deleted",
+        description: `${stationName} has been removed`,
+      });
+      loadData();
+      onDataChange?.();
+    } catch (error) {
+      console.error('Error deleting station:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete station",
+        variant: "destructive"
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -87,7 +217,7 @@ const AdminPanel = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="lineName">Line Name</Label>
                       <Input
@@ -111,6 +241,15 @@ const AdminPanel = () => {
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lineRoute">Route</Label>
+                      <Input
+                        id="lineRoute"
+                        placeholder="e.g., Station A ↔ Station B"
+                        value={newLineRoute}
+                        onChange={(e) => setNewLineRoute(e.target.value)}
+                      />
+                    </div>
                   </div>
                   <Button onClick={handleAddLine} className="w-full md:w-auto">
                     <Plus className="h-4 w-4 mr-2" />
@@ -126,8 +265,8 @@ const AdminPanel = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {lines.map((line, index) => (
-                      <div key={index} className="border rounded-lg p-4 space-y-3">
+                    {lines.map((line) => (
+                      <div key={line.id} className="border rounded-lg p-4 space-y-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
                             <div className={`w-4 h-4 rounded-full ${line.colorClass}`}></div>
@@ -137,7 +276,11 @@ const AdminPanel = () => {
                             <Button size="sm" variant="outline">
                               <Edit className="h-3 w-3" />
                             </Button>
-                            <Button size="sm" variant="outline">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleDeleteLine(line.id, line.name)}
+                            >
                               <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
@@ -163,7 +306,7 @@ const AdminPanel = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="stationName">Station Name</Label>
                       <Input
@@ -175,13 +318,13 @@ const AdminPanel = () => {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="selectLine">Metro Line</Label>
-                      <Select value={selectedLine} onValueChange={setSelectedLine}>
+                      <Select value={selectedLineId} onValueChange={setSelectedLineId}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select line" />
                         </SelectTrigger>
                         <SelectContent>
-                          {lines.map((line, index) => (
-                            <SelectItem key={index} value={line.name}>
+                          {lines.map((line) => (
+                            <SelectItem key={line.id} value={line.id}>
                               <div className="flex items-center space-x-2">
                                 <div className={`w-3 h-3 rounded-full ${line.colorClass}`}></div>
                                 <span>{line.name}</span>
@@ -190,6 +333,16 @@ const AdminPanel = () => {
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="stationPosition">Position</Label>
+                      <Input
+                        id="stationPosition"
+                        type="number"
+                        placeholder="e.g., 5"
+                        value={stationPosition}
+                        onChange={(e) => setStationPosition(e.target.value)}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="interchange">Interchange Station</Label>
@@ -218,11 +371,12 @@ const AdminPanel = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {stations.map((station, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                    {stations.map((station) => (
+                      <div key={station.id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex items-center space-x-3">
                           <div className={`w-3 h-3 rounded-full ${station.lineColor}`}></div>
                           <span className="font-medium">{station.name}</span>
+                          <span className="text-sm text-gray-500">({station.line})</span>
                           {station.isInterchange && (
                             <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
                               Interchange
@@ -233,7 +387,11 @@ const AdminPanel = () => {
                           <Button size="sm" variant="outline">
                             <Edit className="h-3 w-3" />
                           </Button>
-                          <Button size="sm" variant="outline">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleDeleteStation(station.id, station.name)}
+                          >
                             <Trash2 className="h-3 w-3" />
                           </Button>
                         </div>
